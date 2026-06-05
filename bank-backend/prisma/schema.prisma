@@ -1,0 +1,114 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Customer {
+  id          Int       @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  email       String    @unique
+  phone       String
+  address     String?
+  nationalId  String    @unique
+  dateOfBirth DateTime?
+  status      CustomerStatus @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  accounts    Account[]
+
+  @@map("customers")
+}
+
+model Account {
+  id            Int           @id @default(autoincrement())
+  accountNumber String        @unique
+  type          AccountType
+  balance       Decimal       @default(0) @db.Decimal(15, 2)
+  status        AccountStatus @default(ACTIVE)
+  branch        String
+  openDate      DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customerId    Int
+  customer      Customer      @relation(fields: [customerId], references: [id])
+
+  sentTransactions     Transaction[] @relation("SenderAccount")
+  receivedTransactions Transaction[] @relation("ReceiverAccount")
+
+  @@map("accounts")
+}
+
+model Transaction {
+  id              Int               @id @default(autoincrement())
+  reference       String            @unique
+  type            TransactionType
+  amount          Decimal           @db.Decimal(15, 2)
+  description     String?
+  status          TransactionStatus @default(COMPLETED)
+  createdAt       DateTime          @default(now())
+
+  fromAccountId   Int?
+  fromAccount     Account?          @relation("SenderAccount", fields: [fromAccountId], references: [id])
+
+  toAccountId     Int?
+  toAccount       Account?          @relation("ReceiverAccount", fields: [toAccountId], references: [id])
+
+  @@map("transactions")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+  BUSINESS
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+  FROZEN
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
